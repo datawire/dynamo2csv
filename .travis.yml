@@ -1,0 +1,20 @@
+---
+language: python
+python:
+  - "3.5"
+
+# Only build master branch and tags of form 0.1 or 1.0.2 (all PRs will be built):
+branches:
+  only:
+    - master
+    - /^\d+\.\d+(\.\d+)?$/
+
+before_install:
+  - pip install tox-travis
+  - python3 --version
+
+install:
+  - make virtualenv
+
+script:
+  - make build
