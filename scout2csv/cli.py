@@ -152,7 +152,7 @@ def export(args):
     file = args["--output-file"] or "scout-{}.csv".format(time.time())
 
     with open(file, "w+") as csv_file:
-        fieldnames = ["application", "report_id", "report_time", "install_id", "user_agent", "version"] + list(meta_keys)
+        fieldnames = ["application", "report_id", "report_time", "install_id", "user_agent"] + list(meta_keys)
         writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
 
         writer.writeheader()
