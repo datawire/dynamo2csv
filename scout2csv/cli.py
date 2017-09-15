@@ -46,7 +46,11 @@ ignore_ids = {
     "2136a030-d50e-4c7d-bc21-2e1d59b283a8",   # abhay
     "58606e78-231e-4a13-b2cb-d0b04dd30f3e",   # itamar
     "38a51201-50ff-4797-b1f4-8be023c286e1",   # temp cloud
-    "89536d13-bec7-4a59-af01-20090ef6202a"    # jess hawks (ci)
+    "89536d13-bec7-4a59-af01-20090ef6202a",   # jess hawks (ci)
+    
+    # FORGE
+    "ba0625d2-3ba5-4893-9ca1-a47a05198736",   # phil
+    "b177a58c-5115-4fd0-aa42-deb4a93e2247"    # rafi
 }
 
 
