@@ -199,7 +199,7 @@ def scan():
         if last_key is None:
             result = dynamo.scan(TableName=table_name)
         else:
-            result = dynamo.scan(table_name=table_name, ExclusiveStartKey=last_key)
+            result = dynamo.scan(TableName=table_name, ExclusiveStartKey=last_key)
 
         for i in result["Items"]:
             normalized, mk = normalize_item(i)
@@ -226,7 +226,7 @@ def scan2():
         if last_key is None:
             result = dynamo.scan(TableName=table_name)
         else:
-            result = dynamo.scan(table_name=table_name, ExclusiveStartKey=last_key)
+            result = dynamo.scan(TableName=table_name, ExclusiveStartKey=last_key)
 
         for i in result["Items"]:
             normalized = normalize_item2(i)
