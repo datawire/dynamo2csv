@@ -34,6 +34,7 @@ ignore_ids = {
     "5f7557d4-f40d-447e-94d0-f215aa3c2ce7",   # phil
     "b7520e6d-c568-4d77-9210-32fdb3648d48",   # richard
     "03059e6f-004a-404f-9af5-bc6306b884cc",   # rafi
+    "b793ee2a-1180-4987-aaa4-aaf05f3f42af",   # rafi (new laptop)
     "d9e1e5bc-1317-455c-8c35-091e30cee7bf",   # abhay
     "0fe139be-811a-41eb-a00f-599943b9927a",   # itamar
     "63d58097-a459-417e-9760-0938b4d3434b",   # flynn
@@ -42,6 +43,7 @@ ignore_ids = {
     # TELEPRESENCE
     "1609113e-38e9-4001-84c7-4a4cf33c492a",   # phil
     "7e5b36f2-d3e0-4e2b-a37b-be14fd2549ad",   # rafi
+    "8f590a1e-27df-4f92-b6e6-f8b3e5a8a41e",   # rafi (new laptop)
     "2931722c-fcd8-438c-a55d-246176ccbfa8",   # richard
     "2136a030-d50e-4c7d-bc21-2e1d59b283a8",   # abhay
     "58606e78-231e-4a13-b2cb-d0b04dd30f3e",   # itamar
