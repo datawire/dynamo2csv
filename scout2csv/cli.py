@@ -51,7 +51,8 @@ ignore_ids = {
     # FORGE
     "e24f7027-7fae-458d-b7f1-01f20f0a2f14",   # phil (work)
     "ba0625d2-3ba5-4893-9ca1-a47a05198736",   # phil (home)
-    "b177a58c-5115-4fd0-aa42-deb4a93e2247"    # rafi
+    "b177a58c-5115-4fd0-aa42-deb4a93e2247",   # rafi
+    "18c16ac9-945e-4d88-8bbf-706de6d76448"    # richard
 }
 
 
