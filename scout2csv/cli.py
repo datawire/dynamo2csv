@@ -42,7 +42,7 @@ ignore_ids = {
     # TELEPRESENCE
     "1609113e-38e9-4001-84c7-4a4cf33c492a",   # phil
     "7e5b36f2-d3e0-4e2b-a37b-be14fd2549ad",   # rafi
-    "2931722c-fcd8-438c-a55d-246176ccbfa8",
+    "2931722c-fcd8-438c-a55d-246176ccbfa8",   # richard
     "2136a030-d50e-4c7d-bc21-2e1d59b283a8",   # abhay
     "58606e78-231e-4a13-b2cb-d0b04dd30f3e",   # itamar
     "38a51201-50ff-4797-b1f4-8be023c286e1",   # temp cloud
@@ -52,6 +52,7 @@ ignore_ids = {
     "e24f7027-7fae-458d-b7f1-01f20f0a2f14",   # phil (work)
     "ba0625d2-3ba5-4893-9ca1-a47a05198736",   # phil (home)
     "b177a58c-5115-4fd0-aa42-deb4a93e2247",   # rafi
+    "c522b1d4-41dc-43ed-a0c4-67d52e2cad94",   # rafi (new laptop)
     "18c16ac9-945e-4d88-8bbf-706de6d76448"    # richard
 }
 
