@@ -30,6 +30,9 @@ dynamo = None
 table_name = None
 
 ignore_ids = {
+    # MISC (bad users / known issues)
+    "f45cec26-54cf-47d1-8502-aef0c4ff1233",   # (running ambassador in a loop: Kelsey)
+    
     # KUBERNAUT
     "5f7557d4-f40d-447e-94d0-f215aa3c2ce7",   # phil
     "b7520e6d-c568-4d77-9210-32fdb3648d48",   # richard
