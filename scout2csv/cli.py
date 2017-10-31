@@ -94,6 +94,7 @@ def normalize_item(item):
         "install_id":  item["install_id"]["S"],
         "version":     item["version"]["S"],
         "user_agent":  item["user_agent"]["S"],
+        "client_ip":   item.get("client_ip", {"S": "unknown"})["S"]
     }
 
     return merge_dicts(scouted, metadata), metadata.keys()
@@ -111,6 +112,7 @@ def normalize_item2(item):
         "install_id":  item["install_id"]["S"],
         "version":     item["version"]["S"],
         "user_agent":  item["user_agent"]["S"],
+        "client_ip":   item["client_ip"]["S"],
         "metadata":    metadata
     }
 
@@ -164,7 +166,7 @@ def export(args):
     file = args["--output-file"] or "scout-{}.csv".format(time.time())
 
     with open(file, "w+") as csv_file:
-        fieldnames = ["application", "report_id", "report_time", "install_id", "user_agent", "version"] + list(meta_keys)
+        fieldnames = ["application", "report_id", "report_time", "install_id", "user_agent", "version", "client_ip"] + list(meta_keys)
         writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
 
         writer.writeheader()
