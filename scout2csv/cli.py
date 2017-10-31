@@ -41,7 +41,7 @@ ignore_ids = {
     "b793ee2a-1180-4987-aaa4-aaf05f3f42af",   # rafi (new laptop)
     "d9e1e5bc-1317-455c-8c35-091e30cee7bf",   # abhay
     "0fe139be-811a-41eb-a00f-599943b9927a",   # itamar
-    "63d58097-a459-417e-9760-0938b4d3434b",   # flynn
+    "63d58097-a459-417e-9760-0938b4d3434b",   # flynn (laptop)
     "1a9d56b2-93e6-493f-88fc-ba7763531aee",   # jess hawks (ci)
 
     # TELEPRESENCE
@@ -53,13 +53,20 @@ ignore_ids = {
     "58606e78-231e-4a13-b2cb-d0b04dd30f3e",   # itamar
     "38a51201-50ff-4797-b1f4-8be023c286e1",   # temp cloud
     "89536d13-bec7-4a59-af01-20090ef6202a",   # jess hawks (ci)
+    "51e5f54e-14fa-457c-8e65-64ff30cefaeb",   # flynn (laptop)
     
     # FORGE
     "e24f7027-7fae-458d-b7f1-01f20f0a2f14",   # phil (work)
     "ba0625d2-3ba5-4893-9ca1-a47a05198736",   # phil (home)
     "b177a58c-5115-4fd0-aa42-deb4a93e2247",   # rafi
     "c522b1d4-41dc-43ed-a0c4-67d52e2cad94",   # rafi (new laptop)
-    "18c16ac9-945e-4d88-8bbf-706de6d76448"    # richard
+    "18c16ac9-945e-4d88-8bbf-706de6d76448",   # richard
+
+    # AMBASSADOR
+    "efd66fbb-f92d-4871-8d8a-3d51a617b316",   # flynn (laptop)
+    "0db93bcc-29f3-4db8-b1ec-578a56760f9a",   # flynn (GKE)
+    "288ef8d9-c1f8-450e-940a-779ab2aedd7d",   # richard (GKE)
+    "2cf290ed-1f32-451b-9ed9-f4483405398d",   # rafi (laptop)   
 }
 
 
