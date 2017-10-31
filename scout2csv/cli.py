@@ -13,6 +13,7 @@ Usage:
     scout2csv export2keen [options]
 
 Options:
+    -a --app=<name>         Set the app to filter for.
     -o --output-file=<path> Set the output file for an export operation
     -r --region=<id>        Set the AWS region [default: us-east-1]
     -t --table=<name>       The name of the database table
@@ -112,7 +113,6 @@ def normalize_item2(item):
         "install_id":  item["install_id"]["S"],
         "version":     item["version"]["S"],
         "user_agent":  item["user_agent"]["S"],
-        "client_ip":   item["client_ip"]["S"],
         "metadata":    metadata
     }
 
@@ -154,23 +154,52 @@ def export(args):
     import time
 
     items, meta_keys = scan()
+    total_items = len(items)
+
+    ignored_items_by_id = 0
+    ignored_items_by_prerelease = 0
     final_items = []
+
     for it in items:
+
+        if it["install_id"] in ignore_ids:
+            ignored_items_by_id += 1
+            continue
 
         a = ["+", "-", "_"]
         if any(x in it.get("version") for x in a) and not bool(args["--include-prerelease"]):
+            ignored_items_by_prerelease += 1
             continue
 
-        final_items.append(it)
+        if args["--app"] and it.get("application") == args["--app"]:
+            print(args["--app"])
+            print(it.get("application"))
+            final_items.append(it)
+        else:
+            final_items.append(it)
 
     file = args["--output-file"] or "scout-{}.csv".format(time.time())
 
     with open(file, "w+") as csv_file:
-        fieldnames = ["application", "report_id", "report_time", "install_id", "user_agent", "version", "client_ip"] + list(meta_keys)
+        fieldnames = ["application",
+                      "report_id",
+                      "report_time",
+                      "install_id",
+                      "user_agent",
+                      "version",
+                      "client_ip"
+                      ] + list(meta_keys)
+
         writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
 
         writer.writeheader()
         writer.writerows(final_items)
+
+    print("Total Items                      = {}".format(total_items))
+    print("Legitimate Items                 = {}".format(len(final_items)))
+    print("Ignored Items (id)               = {}".format(ignored_items_by_id))
+    print("Ignored Items (pre-release)      = {}".format(ignored_items_by_prerelease))
+    print("Ignored Items (id + pre-release) = {}".format(ignored_items_by_id + ignored_items_by_prerelease))
 
 
 def export2keen(args):
@@ -203,6 +232,7 @@ def scan():
     meta_keys = set()
 
     last_key = None
+
     while True:
         result = None
         if last_key is None:
@@ -213,9 +243,7 @@ def scan():
         for i in result["Items"]:
             normalized, mk = normalize_item(i)
             meta_keys.update(mk)
-
-            if normalized['install_id'] not in ignore_ids:
-                items.append(normalized)
+            items.append(normalized)
 
         last_key = result.get("LastEvaluatedKey", None)
         if last_key is None:
