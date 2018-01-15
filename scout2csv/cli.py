@@ -34,6 +34,7 @@ ignore_ids = {
     # MISC (bad users / known issues)
     "f45cec26-54cf-47d1-8502-aef0c4ff1233",   # (running ambassador in a loop: Kelsey)
     "7c5b0d60-5474-4c52-ac78-af94ab836a05",   # (unknown: Kelsey)
+    "743d3ac4-1201-47a0-9faf-89e5a9eec02a",   # (unknown: Kelsey)
     
     # KUBERNAUT
     "5f7557d4-f40d-447e-94d0-f215aa3c2ce7",   # phil
