@@ -221,49 +221,60 @@ def export(args):
 
 def export_by_query(args):
     import csv
+    import datetime
     import time
 
-    items, meta_keys = query(args)
-    total_items = len(items)
+    q_start_time = datetime.datetime.now()
 
+    items, meta_keys = [], []
     ignored_items_by_id = 0
     ignored_items_by_prerelease = 0
     final_items = []
 
-    for it in items:
+    app = args.get("--app")
+    if app:
+        app = [app]
+    else:
+        app = applications
 
-        if it["install_id"] in ignore_ids:
-            ignored_items_by_id += 1
-            continue
+    for a in app:
+        q_items, q_meta_keys = query(a, args)
+        for it in q_items:
 
-        a = ["+", "-", "_"]
-        if any(x in it.get("version") for x in a) and not bool(args["--include-prerelease"]):
-            ignored_items_by_prerelease += 1
-            continue
+            if it["install_id"] in ignore_ids:
+                ignored_items_by_id += 1
+                continue
 
-        if args["--app"] and it.get("application") == args["--app"]:
+            a = ["+", "-", "_"]
+            if any(x in it.get("version") for x in a) and not bool(args["--include-prerelease"]):
+                ignored_items_by_prerelease += 1
+                continue
+
             final_items.append(it)
-        else:
-            final_items.append(it)
+
+        meta_keys.extend(q_meta_keys)
+
+    q_end_time = datetime.datetime.now()
+    q_total_time = q_end_time - q_start_time
 
     file = args["--output-file"] or "scout-{}.csv".format(time.time())
 
     with open(file, "w+") as csv_file:
         fieldnames = ["application",
-                      "report_id",
-                      "report_time",
-                      "install_id",
-                      "user_agent",
-                      "version",
-                      "client_ip"
-                      ] + list(meta_keys)
+                    "report_id",
+                    "report_time",
+                    "install_id",
+                    "user_agent",
+                    "version",
+                    "client_ip"
+                    ] + meta_keys
 
         writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
 
         writer.writeheader()
         writer.writerows(final_items)
 
-    print("Total Items                      = {}".format(total_items))
+    print("Query Time (seconds)             = {}".format(int(q_total_time.total_seconds())))
     print("Legitimate Items                 = {}".format(len(final_items)))
     print("Ignored Items (id)               = {}".format(ignored_items_by_id))
     print("Ignored Items (pre-release)      = {}".format(ignored_items_by_prerelease))
@@ -296,7 +307,7 @@ def scan():
     return items, meta_keys
 
 
-def query(args):
+def query(app, args):
     start_date = args["<start_date>"]
     end_date = args["<end_date>"]
 
@@ -314,14 +325,14 @@ def query(args):
         result = None
         if last_key is None:
             result = table.query(
-                KeyConditionExpression=Key("application").eq("ambassador") &
+                KeyConditionExpression=Key("application").eq(app) &
                                        Key("report_time").between(start_date, end_date),
                 Limit=1000
             )
         else:
             result = table.query(
                 ExclusiveStartKey=last_key,
-                KeyConditionExpression=Key("application").eq("ambassador") &
+                KeyConditionExpression=Key("application").eq(app) &
                                        Key("report_time").between(start_date, end_date),
                 Limit=1000
             )
