@@ -7,10 +7,9 @@
 Exports a DynamoDB table to CSV
 
 Usage:
-    scout2csv export [options]
+    scout2csv export [options] <start_date> <end_date>
     scout2csv (-h | --help)
     scout2csv --version
-    scout2csv export2keen [options]
 
 Options:
     -a --app=<name>         Set the app to filter for.
@@ -23,19 +22,22 @@ Options:
 
 import arrow
 import boto3
+import csv
+import datetime
+import time
+from boto3.dynamodb.conditions import Key, Attr
 
 from docopt import docopt
 from . import __version__
 
-dynamo = None
 table_name = None
 
 ignore_ids = {
     # MISC (bad users / known issues)
     "f45cec26-54cf-47d1-8502-aef0c4ff1233",   # (running ambassador in a loop: Kelsey)
-    "7c5b0d60-5474-4c52-ac78-af94ab836a05",   # (unknown: Kelsey)
+    "7c5b0d60-5474-4c52-ac78-af94ab836a05",   # (prod.k736.net)
     "743d3ac4-1201-47a0-9faf-89e5a9eec02a",   # (unknown: Kelsey)
-    
+
     # KUBERNAUT
     "5f7557d4-f40d-447e-94d0-f215aa3c2ce7",   # phil
     "b7520e6d-c568-4d77-9210-32fdb3648d48",   # richard
@@ -56,9 +58,10 @@ ignore_ids = {
     "38a51201-50ff-4797-b1f4-8be023c286e1",   # temp cloud
     "89536d13-bec7-4a59-af01-20090ef6202a",   # jess hawks (ci)
     "51e5f54e-14fa-457c-8e65-64ff30cefaeb",   # flynn (laptop)
-    
+
     # FORGE
     "e24f7027-7fae-458d-b7f1-01f20f0a2f14",   # phil (work)
+    "3030799e-dcd9-4351-9b33-c539925004cd",   # phil (work 2)
     "ba0625d2-3ba5-4893-9ca1-a47a05198736",   # phil (home)
     "b177a58c-5115-4fd0-aa42-deb4a93e2247",   # rafi
     "c522b1d4-41dc-43ed-a0c4-67d52e2cad94",   # rafi (new laptop)
@@ -68,7 +71,7 @@ ignore_ids = {
     "efd66fbb-f92d-4871-8d8a-3d51a617b316",   # flynn (laptop)
     "0db93bcc-29f3-4db8-b1ec-578a56760f9a",   # flynn (GKE)
     "288ef8d9-c1f8-450e-940a-779ab2aedd7d",   # richard (GKE)
-    "2cf290ed-1f32-451b-9ed9-f4483405398d",   # rafi (laptop)   
+    "2cf290ed-1f32-451b-9ed9-f4483405398d",   # rafi (laptop)
 }
 
 
@@ -76,8 +79,6 @@ applications = {
     "ambassador",
     "forge",
     "kubernaut",
-    "kubernaut-api",
-    "loom",
     "telepresence",
 }
 
@@ -94,98 +95,65 @@ def merge_dicts(x, y):
 
 def normalize_item(item):
     metadata = {}
-    for k, v in item["metadata"]["M"].items():
-        metadata["meta_{}".format(k)] = v["S"]
+    for k, v in item["metadata"].items():
+        metadata["meta_{}".format(k)] = v
 
     scouted = {
-        "report_id":   item["report_id"]["S"],
-        "report_time": arrow.get(item["report_time"]["S"]).datetime,
-        "application": item["application"]["S"],
-        "install_id":  item["install_id"]["S"],
-        "version":     item["version"]["S"],
-        "user_agent":  item["user_agent"]["S"],
-        "client_ip":   item.get("client_ip", {"S": "unknown"})["S"]
+        "report_id":   item["report_id"],
+        "report_time": arrow.get(item["report_time"]).datetime,
+        "application": item["application"],
+        "install_id":  item["install_id"],
+        "version":     item["version"],
+        "user_agent":  item["user_agent"],
+        "client_ip":   item.get("client_ip", {"S": "unknown"})
     }
 
     return merge_dicts(scouted, metadata), metadata.keys()
 
 
-def normalize_item2(item):
-    metadata = {}
-    for k, v in item["metadata"]["M"].items():
-        metadata[k.lower()] = v["S"]
+def export_by_query(args):
+    start_date = args["<start_date>"]
+    end_date = args["<end_date>"]
 
-    scouted = {
-        "report_id":   item["report_id"]["S"],
-        "report_time": arrow.get(item["report_time"]["S"]).datetime,
-        "application": item["application"]["S"],
-        "install_id":  item["install_id"]["S"],
-        "version":     item["version"]["S"],
-        "user_agent":  item["user_agent"]["S"],
-        "metadata":    metadata
-    }
+    print("Query on 'table = {}' between 'start_date = {}' and 'end_date = {}'".format(table_name, start_date, end_date))
 
-    return scouted
+    q_start_time = datetime.datetime.now()
 
-
-def get_keen_collection(app_name):
-    app_name = str(app_name).lower()
-
-    if app_name in applications and app_name.endswith("-api"):
-        return "api_access"
-    elif app_name in applications:
-        return "app_session"
-    else:
-        return "unknown"
-
-
-def build_event(collection, payload):
-    result = {
-        "app": payload.get("application"),
-        "app_version": payload.get("version"),
-        "app_id":  payload.get("install_id"),
-        "user_agent": payload.get("user_agent")
-    }
-
-    if collection == "api_access":
-        result["api_id"] = payload.get("api_id")
-        result["user_id"] = payload.get("user_id"),
-        result["user_email"] = payload.get("user_email")
-
-    result["metadata"] = normalize_metadata_keys(payload.get("metadata", {}))
-    del result["metadata"]["user-agent"]
-
-    return result
-
-
-def export(args):
-    import csv
-    import time
-
-    items, meta_keys = scan()
-    total_items = len(items)
-
+    items, meta_keys = [], []
+    total_item_count = 0
     ignored_items_by_id = 0
     ignored_items_by_prerelease = 0
     final_items = []
 
-    for it in items:
+    q_apps = args.get("--app")
+    if q_apps:
+        q_apps = [q_apps]
+    else:
+        q_apps = applications
 
-        if it["install_id"] in ignore_ids:
-            ignored_items_by_id += 1
-            continue
+    print("Query for 'apps = {}'".format(q_apps))
 
-        a = ["+", "-", "_"]
-        if any(x in it.get("version") for x in a) and not bool(args["--include-prerelease"]):
-            ignored_items_by_prerelease += 1
-            continue
+    for a in q_apps:
+        q_items, q_meta_keys = query(a, start_date, end_date)
+        total_item_count += len(q_items)
 
-        if args["--app"] and it.get("application") == args["--app"]:
-            print(args["--app"])
-            print(it.get("application"))
+        for it in q_items:
+
+            if it["install_id"] in ignore_ids:
+                ignored_items_by_id += 1
+                continue
+
+            a = ["+", "-", "_"]
+            if any(x in it.get("version") for x in a) and not bool(args["--include-prerelease"]):
+                ignored_items_by_prerelease += 1
+                continue
+
             final_items.append(it)
-        else:
-            final_items.append(it)
+
+        meta_keys.extend(q_meta_keys)
+
+    q_end_time = datetime.datetime.now()
+    q_total_time = q_end_time - q_start_time
 
     file = args["--output-file"] or "scout-{}.csv".format(time.time())
 
@@ -197,46 +165,27 @@ def export(args):
                       "user_agent",
                       "version",
                       "client_ip"
-                      ] + list(meta_keys)
+                      ] + meta_keys
 
         writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
 
         writer.writeheader()
         writer.writerows(final_items)
 
-    print("Total Items                      = {}".format(total_items))
+    print("")
+    print("Output CSV                       = {}".format(file))
+    print("Query Time (seconds)             = {}".format(int(q_total_time.total_seconds())))
+    print("Total Items                      = {}".format(total_item_count))
     print("Legitimate Items                 = {}".format(len(final_items)))
     print("Ignored Items (id)               = {}".format(ignored_items_by_id))
     print("Ignored Items (pre-release)      = {}".format(ignored_items_by_prerelease))
     print("Ignored Items (id + pre-release) = {}".format(ignored_items_by_id + ignored_items_by_prerelease))
 
 
-def export2keen(args):
-    import keen
+def query(app, start_date, end_date):
+    db = boto3.resource('dynamodb', region_name='us-east-1')
+    table = db.Table(table_name)
 
-    items = scan2()
-    app_sessions = []
-    api_access = []
-    for it in items:
-        collection = get_keen_collection(it["application"])
-        ev = build_event(collection, it)
-        ev["keen"] = {"timestamp": it["report_time"].isoformat()}
-
-        a = ["+", "-", "_"]
-        if any(x in ev.get("app_version") for x in a) and not bool(args["--include-prerelease"]):
-            continue
-
-        if collection == "api_access":
-            api_access.append(ev)
-        else:
-            app_sessions.append(ev)
-
-    keen.add_events({
-        'app_sessions': app_sessions,
-    })
-
-
-def scan():
     items = []
     meta_keys = set()
 
@@ -245,9 +194,20 @@ def scan():
     while True:
         result = None
         if last_key is None:
-            result = dynamo.scan(TableName=table_name)
+            result = table.query(
+                IndexName="application-report_time-index",
+                KeyConditionExpression=Key("application").eq(app) &
+                                       Key("report_time").between(start_date, end_date),
+                Limit=1000
+            )
         else:
-            result = dynamo.scan(TableName=table_name, ExclusiveStartKey=last_key)
+            result = table.query(
+                IndexName="application-report_time-index",
+                ExclusiveStartKey=last_key,
+                KeyConditionExpression=Key("application").eq(app) &
+                                       Key("report_time").between(start_date, end_date),
+                Limit=1000
+            )
 
         for i in result["Items"]:
             normalized, mk = normalize_item(i)
@@ -262,43 +222,12 @@ def scan():
     return items, meta_keys
 
 
-def scan2():
-    items = []
-    meta_keys = set()
-
-    last_key = None
-    while True:
-        result = None
-        if last_key is None:
-            result = dynamo.scan(TableName=table_name)
-        else:
-            result = dynamo.scan(TableName=table_name, ExclusiveStartKey=last_key)
-
-        for i in result["Items"]:
-            normalized = normalize_item2(i)
-
-            if normalized['install_id'] not in ignore_ids:
-                items.append(normalized)
-
-        last_key = result.get("LastEvaluatedKey", None)
-        if last_key is None:
-            break
-
-    items.sort(key=lambda item: item["report_time"], reverse=True)
-    return items
-
-
 def run(args):
-    global dynamo
-    dynamo = boto3.client("dynamodb", region_name=args["--region"])
-
     global table_name
     table_name = args["--table"]
 
     if args["export"]:
-        export(args)
-    if args["export2keen"]:
-        export2keen(args)
+        export_by_query(args)
 
 
 def main():

@@ -12,7 +12,6 @@ setup(
         "arrow",
         "boto3",
         "docopt",
-        "keen"
     ],
     entry_points="""
         [console_scripts]
