@@ -35,7 +35,7 @@ table_name = None
 ignore_ids = {
     # MISC (bad users / known issues)
     "f45cec26-54cf-47d1-8502-aef0c4ff1233",   # (running ambassador in a loop: Kelsey)
-    "7c5b0d60-5474-4c52-ac78-af94ab836a05",   # (unknown: Kelsey)
+    "7c5b0d60-5474-4c52-ac78-af94ab836a05",   # (prod.k736.net)
     "743d3ac4-1201-47a0-9faf-89e5a9eec02a",   # (unknown: Kelsey)
 
     # KUBERNAUT
@@ -61,6 +61,7 @@ ignore_ids = {
 
     # FORGE
     "e24f7027-7fae-458d-b7f1-01f20f0a2f14",   # phil (work)
+    "3030799e-dcd9-4351-9b33-c539925004cd",   # phil (work 2)
     "ba0625d2-3ba5-4893-9ca1-a47a05198736",   # phil (home)
     "b177a58c-5115-4fd0-aa42-deb4a93e2247",   # rafi
     "c522b1d4-41dc-43ed-a0c4-67d52e2cad94",   # rafi (new laptop)
