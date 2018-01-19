@@ -7,8 +7,7 @@
 Exports a DynamoDB table to CSV
 
 Usage:
-    scout2csv export [options]
-    scout2csv query [options] <start_date> <end_date>
+    scout2csv export [options] <start_date> <end_date>
     scout2csv (-h | --help)
     scout2csv --version
 
@@ -23,13 +22,14 @@ Options:
 
 import arrow
 import boto3
-import json
+import csv
+import datetime
+import time
 from boto3.dynamodb.conditions import Key, Attr
 
 from docopt import docopt
 from . import __version__
 
-dynamo = None
 table_name = None
 
 ignore_ids = {
@@ -77,17 +77,8 @@ applications = {
     "ambassador",
     "forge",
     "kubernaut",
-    "kubernaut-api",
-    "loom",
     "telepresence",
 }
-
-
-class DecimalEncoder(json.JSONEncoder):
-    def default(self, o):
-        if isinstance(o, decimal.Decimal):
-            return str(o)
-        return super(DecimalEncoder, self).default(o)
 
 
 def normalize_metadata_keys(metadata):
@@ -118,127 +109,32 @@ def normalize_item(item):
     return merge_dicts(scouted, metadata), metadata.keys()
 
 
-def normalize_item2(item):
-    metadata = {}
-    for k, v in item["metadata"]["M"].items():
-        metadata[k.lower()] = v["S"]
-
-    scouted = {
-        "report_id":   item["report_id"]["S"],
-        "report_time": arrow.get(item["report_time"]["S"]).datetime,
-        "application": item["application"]["S"],
-        "install_id":  item["install_id"]["S"],
-        "version":     item["version"]["S"],
-        "user_agent":  item["user_agent"]["S"],
-        "metadata":    metadata
-    }
-
-    return scouted
-
-
-def get_keen_collection(app_name):
-    app_name = str(app_name).lower()
-
-    if app_name in applications and app_name.endswith("-api"):
-        return "api_access"
-    elif app_name in applications:
-        return "app_session"
-    else:
-        return "unknown"
-
-
-def build_event(collection, payload):
-    result = {
-        "app": payload.get("application"),
-        "app_version": payload.get("version"),
-        "app_id":  payload.get("install_id"),
-        "user_agent": payload.get("user_agent")
-    }
-
-    if collection == "api_access":
-        result["api_id"] = payload.get("api_id")
-        result["user_id"] = payload.get("user_id"),
-        result["user_email"] = payload.get("user_email")
-
-    result["metadata"] = normalize_metadata_keys(payload.get("metadata", {}))
-    del result["metadata"]["user-agent"]
-
-    return result
-
-
-def export(args):
-    import csv
-    import time
-
-    items, meta_keys = scan()
-    total_items = len(items)
-
-    ignored_items_by_id = 0
-    ignored_items_by_prerelease = 0
-    final_items = []
-
-    for it in items:
-
-        if it["install_id"] in ignore_ids:
-            ignored_items_by_id += 1
-            continue
-
-        a = ["+", "-", "_"]
-        if any(x in it.get("version") for x in a) and not bool(args["--include-prerelease"]):
-            ignored_items_by_prerelease += 1
-            continue
-
-        if args["--app"] and it.get("application") == args["--app"]:
-            print(args["--app"])
-            print(it.get("application"))
-            final_items.append(it)
-        else:
-            final_items.append(it)
-
-    file = args["--output-file"] or "scout-{}.csv".format(time.time())
-
-    with open(file, "w+") as csv_file:
-        fieldnames = ["application",
-                      "report_id",
-                      "report_time",
-                      "install_id",
-                      "user_agent",
-                      "version",
-                      "client_ip"
-                      ] + list(meta_keys)
-
-        writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
-
-        writer.writeheader()
-        writer.writerows(final_items)
-
-    print("Total Items                      = {}".format(total_items))
-    print("Legitimate Items                 = {}".format(len(final_items)))
-    print("Ignored Items (id)               = {}".format(ignored_items_by_id))
-    print("Ignored Items (pre-release)      = {}".format(ignored_items_by_prerelease))
-    print("Ignored Items (id + pre-release) = {}".format(ignored_items_by_id + ignored_items_by_prerelease))
-
-
 def export_by_query(args):
-    import csv
-    import datetime
-    import time
+    start_date = args["<start_date>"]
+    end_date = args["<end_date>"]
+
+    print("Query on 'table = {}' between 'start_date = {}' and 'end_date = {}'".format(table_name, start_date, end_date))
 
     q_start_time = datetime.datetime.now()
 
     items, meta_keys = [], []
+    total_item_count = 0
     ignored_items_by_id = 0
     ignored_items_by_prerelease = 0
     final_items = []
 
-    app = args.get("--app")
-    if app:
-        app = [app]
+    q_apps = args.get("--app")
+    if q_apps:
+        q_apps = [q_apps]
     else:
-        app = applications
+        q_apps = applications
 
-    for a in app:
-        q_items, q_meta_keys = query(a, args)
+    print("Query for 'apps = {}'".format(q_apps))
+
+    for a in q_apps:
+        q_items, q_meta_keys = query(a, start_date, end_date)
+        total_item_count += len(q_items)
+
         for it in q_items:
 
             if it["install_id"] in ignore_ids:
@@ -261,58 +157,30 @@ def export_by_query(args):
 
     with open(file, "w+") as csv_file:
         fieldnames = ["application",
-                    "report_id",
-                    "report_time",
-                    "install_id",
-                    "user_agent",
-                    "version",
-                    "client_ip"
-                    ] + meta_keys
+                      "report_id",
+                      "report_time",
+                      "install_id",
+                      "user_agent",
+                      "version",
+                      "client_ip"
+                      ] + meta_keys
 
         writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
 
         writer.writeheader()
         writer.writerows(final_items)
 
+    print("")
+    print("Output CSV                       = {}".format(file))
     print("Query Time (seconds)             = {}".format(int(q_total_time.total_seconds())))
+    print("Total Items                      = {}".format(total_item_count))
     print("Legitimate Items                 = {}".format(len(final_items)))
     print("Ignored Items (id)               = {}".format(ignored_items_by_id))
     print("Ignored Items (pre-release)      = {}".format(ignored_items_by_prerelease))
     print("Ignored Items (id + pre-release) = {}".format(ignored_items_by_id + ignored_items_by_prerelease))
 
 
-def scan():
-    items = []
-    meta_keys = set()
-
-    last_key = None
-
-    while True:
-        result = None
-        if last_key is None:
-            result = dynamo.scan(TableName=table_name)
-        else:
-            result = dynamo.scan(TableName=table_name, ExclusiveStartKey=last_key)
-
-        for i in result["Items"]:
-            normalized, mk = normalize_item(i)
-            meta_keys.update(mk)
-            items.append(normalized)
-
-        last_key = result.get("LastEvaluatedKey", None)
-        if last_key is None:
-            break
-
-    items.sort(key=lambda item: item["report_time"], reverse=True)
-    return items, meta_keys
-
-
-def query(app, args):
-    start_date = args["<start_date>"]
-    end_date = args["<end_date>"]
-
-    print("Query 'table = {}' between 'start_date = {}' and 'end_date = {}'".format(table_name, start_date, end_date))
-
+def query(app, start_date, end_date):
     db = boto3.resource('dynamodb', region_name='us-east-1')
     table = db.Table(table_name)
 
@@ -325,12 +193,14 @@ def query(app, args):
         result = None
         if last_key is None:
             result = table.query(
+                IndexName="application-report_time-index",
                 KeyConditionExpression=Key("application").eq(app) &
                                        Key("report_time").between(start_date, end_date),
                 Limit=1000
             )
         else:
             result = table.query(
+                IndexName="application-report_time-index",
                 ExclusiveStartKey=last_key,
                 KeyConditionExpression=Key("application").eq(app) &
                                        Key("report_time").between(start_date, end_date),
@@ -349,37 +219,12 @@ def query(app, args):
     items.sort(key=lambda item: item["report_time"], reverse=True)
     return items, meta_keys
 
-    # response = table.query(
-    #     Limit=1000,
-    #     KeyConditionExpression=Key("application").eq("") & Key("report_time").between(start_date, end_date)
-    # )
-    #
-    # for i in response['Items']:
-    #     print(json.dumps(i, cls=DecimalEncoder))
-    #
-    # while 'LastEvaluatedKey' in response:
-    #     response = table.query(
-    #         Limit=1000,
-    #         KeyConditionExpression=Key("application").eq("ambassador") & Key("report_time").between(start_date, end_date),
-    #         ExclusiveStartKey=response['LastEvaluatedKey']
-    #     )
-    #
-    # for i in response['Items']:
-    #     print(json.dumps(i, cls=DecimalEncoder))
-    #
-    # print(response)
-
 
 def run(args):
-    global dynamo
-    dynamo = boto3.client("dynamodb", region_name=args["--region"])
-
     global table_name
     table_name = args["--table"]
 
     if args["export"]:
-        export(args)
-    if args["query"]:
         export_by_query(args)
 
 
