@@ -36,7 +36,8 @@ ignore_ids = {
     # MISC (bad users / known issues)
     "f45cec26-54cf-47d1-8502-aef0c4ff1233",   # (running ambassador in a loop: Kelsey)
     "7c5b0d60-5474-4c52-ac78-af94ab836a05",   # (unknown: Kelsey)
-    
+    "743d3ac4-1201-47a0-9faf-89e5a9eec02a",   # (unknown: Kelsey)
+
     # KUBERNAUT
     "5f7557d4-f40d-447e-94d0-f215aa3c2ce7",   # phil
     "b7520e6d-c568-4d77-9210-32fdb3648d48",   # richard
@@ -57,7 +58,7 @@ ignore_ids = {
     "38a51201-50ff-4797-b1f4-8be023c286e1",   # temp cloud
     "89536d13-bec7-4a59-af01-20090ef6202a",   # jess hawks (ci)
     "51e5f54e-14fa-457c-8e65-64ff30cefaeb",   # flynn (laptop)
-    
+
     # FORGE
     "e24f7027-7fae-458d-b7f1-01f20f0a2f14",   # phil (work)
     "ba0625d2-3ba5-4893-9ca1-a47a05198736",   # phil (home)
@@ -69,7 +70,7 @@ ignore_ids = {
     "efd66fbb-f92d-4871-8d8a-3d51a617b316",   # flynn (laptop)
     "0db93bcc-29f3-4db8-b1ec-578a56760f9a",   # flynn (GKE)
     "288ef8d9-c1f8-450e-940a-779ab2aedd7d",   # richard (GKE)
-    "2cf290ed-1f32-451b-9ed9-f4483405398d",   # rafi (laptop)   
+    "2cf290ed-1f32-451b-9ed9-f4483405398d",   # rafi (laptop)
 }
 
 
